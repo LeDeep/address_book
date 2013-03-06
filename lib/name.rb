@@ -8,12 +8,12 @@ attr_reader :name, :contact_id
   end
 
   def get_unique_id(name)
-    DB.exec("SELECT currval(pg_get_serial_sequence('name', 'id'))").map { |info| info }.each {|hash| hash.each_value {|value| @contact_id = value }}
+    DB.exec("SELECT currval(pg_get_serial_sequence('name', 'contact_id'))").map { |info| info }.each {|hash| hash.each_value {|value| @contact_id = value }}
     @contact_id
   end
 
   def save
-    DB.exec("INSERT INTO name (name) VALUES ('#{@name}')")
+    @contact_id = DB.exec("INSERT INTO name (name) VALUES ('#{@name}') RETURNING contact_id;").map {|result| result['contact_id']}.first
   end
 
   def self.all

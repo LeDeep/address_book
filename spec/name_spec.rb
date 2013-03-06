@@ -2,15 +2,6 @@ require 'spec_helper'
 
 describe Name do 
 
-
-  context '#save' do 
-    it 'saves contact name to the database' do 
-      DB.should_receive(:exec).with ("INSERT INTO name (name) VALUES ('Mike Piccolo')")
-      info = Name.new('Mike Piccolo')
-      info.save
-    end
-  end
-
    context '.all' do
     it 'lists all the names in address_book' do
       names = ['Mike Piccolo', 'Michael K-N', 'Peter Lowry']
@@ -19,13 +10,26 @@ describe Name do
     end
   end
 
-  context '#get_unique_id' do 
-    it 'gets the unique id from name' do
+  context '#save' do 
+     it 'saves the task to the database' do
+      name = Name.new('Test')
+      expect {name.save}.to change {Name.all.length}.by 1
+    end
+  end
+   
+
+ context '#contact_id' do 
+    it 'should be nil before saving' do 
       info = Name.new('Mike Piccolo')
+      info.contact_id.should be_nil
+    end
+  
+    it 'should have the database value after saving' do
+      info = Name.new('Mike Piccolo') 
       info.save
-      uniq = 332
-      uniq += 5
-      info.get_unique_id("Mike Piccolo").should eq uniq.to_s
+      info.contact_id.should_not be_nil
+      original_id = info.contact_id
+      info.get_unique_id("Mike Piccolo").should eq original_id
     end
   end
 end

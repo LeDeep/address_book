@@ -1,5 +1,5 @@
 require 'pg'
-require './lib/contact_info'
+require './lib/contact'
 require './lib/name'
 require './lib/phone'
 require './lib/email'
@@ -9,9 +9,15 @@ require './lib/address'
 
 DB = PG.connect(:dbname => 'address_book')
 
-
+def empty_db
+   DB.exec("DELETE FROM name *;")
+   DB.exec("DELETE FROM email *;")
+   DB.exec("DELETE FROM phone_number *;")
+   DB.exec("DELETE FROM mailing_address *;")
+end
 
 def welcome
+  empty_db
   puts 'Welcome to the Address Book App.'
   menu
 end
@@ -22,7 +28,7 @@ def menu
     puts "Press 'a' to add a contact and their info, press 'l' to list all\
      of your stored contacts, press 'v' to view a contact and their info, press\
       'e' to edit contact information, press 'd' to delete a contact."
-    puts "Press 'q' at any time to quit"
+    puts "Press 'q' at any time to quit."
     choice = gets.chomp
     case choice
     when 'a'
@@ -30,26 +36,65 @@ def menu
       phone = nil
       email = nil
       address = nil
+      contact_id = nil
       next if name == 's' 
         puts "Enter a contact name, or press 's' to skip."
         name = Name.new(gets.chomp)
-      next if phone == 's' 
-        puts "Enter a phone number for #{name.name}, or press 's' to skip."
-        phone = Phone.new(gets.chomp)
+        name.save
+        contact_id = name.contact_id
+      next if phone == 's'
+        phone_type = nil
+        entered_number = nil
+        until phone_type == 'd' || entered_number == 'd'  
+          puts "Enter a phone number for #{name.name}, or press 's' to skip.  When you are done entering numbers, press 'd'.\n"
+          entered_number = gets.chomp
+          break if phone_type == 'd' || entered_number == 'd'
+          puts "What type of number is this? Press 'h' for home, 'w' for work and 'c' for cell.\n"
+          phone_type = gets.chomp
+          if phone_type == 'h' || phone_type == 'w' || phone_type == 'c'
+            attributes = {'contact_id' => contact_id, 'phone_number' => entered_number, 'phone_type' => phone_type}
+            Phone.new(attributes).save
+          else
+            phone_type = nil
+          end
+        end
       next if email == 's' 
-        puts "Enter a email address for #{name.name}, or press 's' to skip."
-        email = Email.new(gets.chomp)
+        email_type = nil
+        entered_address = nil
+        until email_type == 'd' || entered_address == 'd' 
+          puts "Enter an email address for #{name.name}, or press 's' to skip.  When you are done entering emails, press 'd'.\n"
+          entered_address = gets.chomp
+          break if email_type == 'd' || entered_address == 'd'
+          puts "What type of email address is this? Press 'p' for personal, 'w' for work.\n"
+          email_type = gets.chomp
+          if email_type == 'p' || email_type == 'w'
+            attributes = {'contact_id' => contact_id, 'email' => entered_address, 'email_type' => email_type}
+            Email.new(attributes).save
+          else
+            email_type = nil
+          end
+        end
       next if address == 's'
-        puts "Enter a mailing address for #{name.name}, or press 's' to skip."
-        address = Address.new(gets.chomp)
-        add(name, phone, email, address)
+        address_type = nil
+        entered_mailing_address = nil
+        until address_type == 'd' || entered_mailing_address == 'd' 
+          puts "Enter an address for #{name.name}, or press 's' to skip.  When you are done entering addresses, press 'd'.\n"
+          entered_mailing_address = gets.chomp
+          break if address_type == 'd' || entered_mailing_address == 'd'
+          puts "What type of address is this? Press 'h' for home, 'w' for work.\n"
+          address_type = gets.chomp
+          if address_type == 'h' || address_type == 'w'
+            attributes = {'contact_id' => contact_id, 'mailing_address' => entered_mailing_address, 'address_type' => address_type}
+            Address.new(attributes).save
+          else
+            address_type = nil
+          end      
+        end
     when 'l'
       list
     when 'v'
-      puts "Which contact would you like to view"
-      choice = gets.chomp
-      view(choice)
-      #convert name to name.id
+      puts "Please enter a name:"
+      view(gets.chomp)
     when 'e'
       edit
     when 'd'
@@ -60,8 +105,10 @@ def menu
   end
 end
 
+
+
+
 def add(name, phone, email, address)
-  name.save
   phone.save
   email.save
   address.save
@@ -75,9 +122,7 @@ names.each { |name| puts name.name}
 end
 
 def view(name)
-  result = DB.exec("SELECT name.name, phone_number.phone_number, email.email, mailing_address.mailing_address
-                    FROM name, phone_number, email, mailing_address 
-                    WHERE name.name = '#{name}' and name.id = phone_number.id and name.id = mailing_address.id and name.id = email.id ").map { |info| info }
+  result = Contact.results(name)
   puts "Here is the info for #{name}:"
   result.each {|hash| hash.each_value {|value| print value + " \n" }}  
   print "\n"
